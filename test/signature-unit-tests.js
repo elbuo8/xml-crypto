@@ -7,9 +7,9 @@ var select = require('xpath.js')
   
 module.exports = {    
 
-  "signer adds increasing id atributes to elements": function (test) {    
-    verifyAddsId(test, "wssecurity", "equal")
-    verifyAddsId(test, null, "different") 
+  "signer adds increasing id atributes to elements": async function (test) {
+    await verifyAddsId(test, "wssecurity", "equal")
+    await verifyAddsId(test, null, "different")
     test.done();   
   },
 
@@ -22,7 +22,7 @@ module.exports = {
   },
 
 
-  "signer creates signature with correct structure": function(test) {
+  "signer creates signature with correct structure": async function(test) {
     
     function DummyKeyInfo() {
       this.getKeyInfo = function(key) {
@@ -90,7 +90,7 @@ module.exports = {
     sig.addReference("//*[local-name(.)='y']", ["http://DummyTransformation"], "http://dummyDigest")
     sig.addReference("//*[local-name(.)='w']", ["http://DummyTransformation"], "http://dummyDigest")
 
-    sig.computeSignature(xml)
+    await sig.computeSignature(xml)
     var signature = sig.getSignatureXml()
     var expected = "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\">"+
                   "<SignedInfo>"+
@@ -124,7 +124,6 @@ module.exports = {
                   "</KeyInfo>"+
                   "</Signature>"
 
-   
     test.equal(expected, signature, "wrong signature format")
 
     var signedXml = sig.getSignedXml()
@@ -175,7 +174,7 @@ module.exports = {
 
 
 
-  "signer creates correct signature values": function(test) {
+  "signer creates correct signature values": async function(test) {
 
     var xml = "<root><x xmlns=\"ns\" Id=\"_0\"></x><y attr=\"value\" Id=\"_1\"></y><z><w Id=\"_2\"></w></z></root>"
     var sig = new SignedXml()
@@ -186,7 +185,7 @@ module.exports = {
     sig.addReference("//*[local-name(.)='y']")
     sig.addReference("//*[local-name(.)='w']")
 
-    sig.computeSignature(xml)
+    await sig.computeSignature(xml)
     var signedXml = sig.getSignedXml()
     var expected =  "<root><x xmlns=\"ns\" Id=\"_0\"/><y attr=\"value\" Id=\"_1\"/><z><w Id=\"_2\"/></z>" +
                     "<Signature xmlns=\"http://www.w3.org/2000/09/xmldsig#\">" +
@@ -266,24 +265,24 @@ module.exports = {
     test.done()
   },  
  
-  "verify valid signature": function(test) {
-    passValidSignature(test, "./test/static/valid_signature.xml")
-    passValidSignature(test, "./test/static/valid_signature wsu.xml", "wssecurity")
-    passValidSignature(test, "./test/static/valid_signature_with_reference_keyInfo.xml")
-    passValidSignature(test, "./test/static/valid_signature_utf8.xml")
+  "verify valid signature": async function(test) {
+    await passValidSignature(test, "./test/static/valid_signature.xml")
+    await passValidSignature(test, "./test/static/valid_signature wsu.xml", "wssecurity")
+    await passValidSignature(test, "./test/static/valid_signature_with_reference_keyInfo.xml")
+    await passValidSignature(test, "./test/static/valid_signature_utf8.xml")
     test.done()
   },
 
 
-  "fail invalid signature": function(test) {
-    failInvalidSignature(test, "./test/static/invalid_signature - signature value.xml")
-    failInvalidSignature(test, "./test/static/invalid_signature - hash.xml")    
-    failInvalidSignature(test, "./test/static/invalid_signature - non existing reference.xml")
-    failInvalidSignature(test, "./test/static/invalid_signature - changed content.xml")
-    failInvalidSignature(test, "./test/static/invalid_signature - wsu - invalid signature value.xml", "wssecurity")
-    failInvalidSignature(test, "./test/static/invalid_signature - wsu - hash.xml", "wssecurity")
-    failInvalidSignature(test, "./test/static/invalid_signature - wsu - non existing reference.xml", "wssecurity")
-    failInvalidSignature(test, "./test/static/invalid_signature - wsu - changed content.xml", "wssecurity")
+  "fail invalid signature": async function(test) {
+    await failInvalidSignature(test, "./test/static/invalid_signature - signature value.xml")
+    await failInvalidSignature(test, "./test/static/invalid_signature - hash.xml")
+    await failInvalidSignature(test, "./test/static/invalid_signature - non existing reference.xml")
+    await failInvalidSignature(test, "./test/static/invalid_signature - changed content.xml")
+    await failInvalidSignature(test, "./test/static/invalid_signature - wsu - invalid signature value.xml", "wssecurity")
+    await failInvalidSignature(test, "./test/static/invalid_signature - wsu - hash.xml", "wssecurity")
+    await failInvalidSignature(test, "./test/static/invalid_signature - wsu - non existing reference.xml", "wssecurity")
+    await failInvalidSignature(test, "./test/static/invalid_signature - wsu - changed content.xml", "wssecurity")
 
     test.done()
   },
@@ -291,38 +290,37 @@ module.exports = {
 
 }
 
-function passValidSignature(test, file, mode) {
+async function passValidSignature(test, file, mode) {
   var xml = fs.readFileSync(file).toString()
-  var res = verifySignature(xml, mode)
+  var res = await verifySignature(xml, mode)
   test.equal(true, res, "expected signature to be valid, but it was reported invalid")
 }
 
 
-function failInvalidSignature(test, file, mode) {
+async function failInvalidSignature(test, file, mode) {
   var xml = fs.readFileSync(file).toString()
-  var res = verifySignature(xml, mode)
+  var res = await verifySignature(xml, mode)
   test.equal(false, res, "expected signature to be invalid, but it was reported valid")  
 }
 
-function verifySignature(xml, mode) {
-   
+async function verifySignature(xml, mode) {
   var doc = new dom().parseFromString(xml)    
   var node = select(doc, "/*/*[local-name(.)='Signature' and namespace-uri(.)='http://www.w3.org/2000/09/xmldsig#']")[0]
   
   var sig = new SignedXml(mode) 
   sig.keyInfoProvider = new FileKeyInfo("./test/static/client_public.pem")
   sig.loadSignature(node.toString())
-  var res = sig.checkSignature(xml)
+  var res = await sig.checkSignature(xml)
   console.log(sig.validationErrors)
   return res;
 }
 
-function verifyDoesNotDuplicateIdAttributes(test, mode, prefix) {
+async function verifyDoesNotDuplicateIdAttributes(test, mode, prefix) {
   var xml = "<x xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd' " + prefix + "Id='_1'></x>"
   var sig = new SignedXml(mode)
   sig.signingKey = fs.readFileSync("./test/static/client.pem")
   sig.addReference("//*[local-name(.)='x']")
-  sig.computeSignature(xml)
+  await sig.computeSignature(xml)
   var signedxml = sig.getOriginalXmlWithIds()
   var doc = new dom().parseFromString(signedxml)    
   var attrs = select(doc, "//@*")
@@ -330,7 +328,7 @@ function verifyDoesNotDuplicateIdAttributes(test, mode, prefix) {
 
 }
 
-function verifyAddsId(test, mode, nsMode) {
+async function verifyAddsId(test, mode, nsMode) {
   var xml = "<x xmlns=\"ns\"></x><y attr=\"value\"></y><z><w></w></z>"
   var sig = new SignedXml(mode)
   sig.signingKey = fs.readFileSync("./test/static/client.pem")
@@ -339,7 +337,7 @@ function verifyAddsId(test, mode, nsMode) {
   sig.addReference("//*[local-name(.)='y']")
   sig.addReference("//*[local-name(.)='w']")
 
-  sig.computeSignature(xml)
+  await sig.computeSignature(xml)
   var signedxml = sig.getOriginalXmlWithIds()
   var doc = new dom().parseFromString(signedxml)
 
