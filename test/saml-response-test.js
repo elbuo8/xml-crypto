@@ -26,11 +26,14 @@ exports['test validating wrapped assertion signature'] = async function (test) {
   const expected = new Error('Cannot validate a document which contains multiple elements with the ' +
       'same value for the ID / Id / Id attributes, in order to prevent ' +
       'signature wrapping attack.');
+  let err;
   try {
     await sig.checkSignature(xml)
-  } catch (err) {
-    test.equal(err.message, expected.message);
+  } catch (e) {
+    err = e;
   }
+  test.ok(err);
+  test.equal(err.message, expected.message);
   test.done();
 };
 
@@ -55,11 +58,14 @@ exports['test reference id does not contain quotes'] = async function (test) {
   sig.keyInfoProvider = new crypto.FileKeyInfo("./test/static/feide_public.pem");
   sig.loadSignature(signature);
   const expected = new Error('Cannot validate a uri with quotes inside it');
+  let err;
   try {
-    await sig.checkSignature(xml);
-  } catch(err) {
-    test.equal(err.message, expected.message);
+    await sig.checkSignature(xml)
+  } catch (e) {
+    err = e;
   }
+  test.ok(err);
+  test.equal(err.message, expected.message);
   test.done();
 };
 
